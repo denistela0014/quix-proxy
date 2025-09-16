@@ -4,32 +4,34 @@ const fetch = require("node-fetch");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// URL do quiz original
-const QUIZ_URL = "https://pilatespro.site/";
-
-// URL do checkout final (seu)
-const CHECKOUT_FINAL = "https://pay.kiwify.com.br/I7LKmAh";
-
-// URL do checkout original (para interceptar e trocar)
+// 🔗 Links
+const QUIZ_URL = "https://pilatespro.site";
 const CHECKOUT_ORIGINAL = "https://lastlink.com/p/C31A451F4/checkout-payment";
+const CHECKOUT_SEU = "https://pay.kiwify.com.br/I7LKmAh";
 
-// Rota principal - carrega o quiz original
-app.get("/", async (req, res) => {
+// Proxy genérico: pega qualquer rota e repassa para o quiz
+app.get("*", async (req, res) => {
   try {
-    const response = await fetch(QUIZ_URL);
-    let body = await response.text();
+    // Monta a URL de destino
+    const destino = QUIZ_URL + req.originalUrl;
 
-    // Substitui o link do checkout original pelo seu
-    body = body.replace(new RegExp(CHECKOUT_ORIGINAL, "g"), CHECKOUT_FINAL);
+    // Busca a página do quiz
+    const resposta = await fetch(destino);
+    let html = await resposta.text();
 
-    res.send(body);
-  } catch (err) {
-    console.error("Erro ao carregar o quiz:", err);
-    res.status(500).send("Erro ao carregar o quiz");
+    // Substitui o checkout original pelo seu checkout Kiwify
+    html = html.replace(new RegExp(CHECKOUT_ORIGINAL, "g"), CHECKOUT_SEU);
+
+    // Retorna a página
+    res.send(html);
+  } catch (erro) {
+    console.error("Erro ao carregar quiz:", erro);
+    res.status(500).send("Erro ao carregar quiz");
   }
 });
 
-// Mantém o servidor vivo
+// Inicia servidor
 app.listen(PORT, () => {
   console.log(`Servidor rodando em http://localhost:${PORT}`);
 });
+
