@@ -1,46 +1,35 @@
-import express from "express";
-import puppeteer from "puppeteer";
+const express = require("express");
+const fetch = require("node-fetch");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // URL do quiz original
-const QUIZ_URL = "https://pilatespro.site";
+const QUIZ_URL = "https://pilatespro.site/";
 
-// Checkout original que será substituído
-const ORIGINAL_CHECKOUT = "https://lastlink.com/p/C31A451F4/checkout-payment";
+// URL do checkout final (seu)
+const CHECKOUT_FINAL = "https://pay.kiwify.com.br/I7LKmAh";
 
-// Seu checkout da Kiwify
-const MEU_CHECKOUT = "https://pay.kiwify.com.br/I7LKmAh";
+// URL do checkout original (para interceptar e trocar)
+const CHECKOUT_ORIGINAL = "https://lastlink.com/p/C31A451F4/checkout-payment";
 
-app.get("*", async (req, res) => {
+// Rota principal - carrega o quiz original
+app.get("/", async (req, res) => {
   try {
-    const browser = await puppeteer.launch({
-      headless: "new", // executa sem abrir janela
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
-    const page = await browser.newPage();
+    const response = await fetch(QUIZ_URL);
+    let body = await response.text();
 
-    // Navega para o quiz original
-    await page.goto(QUIZ_URL + req.originalUrl, {
-      waitUntil: "networkidle2",
-    });
+    // Substitui o link do checkout original pelo seu
+    body = body.replace(new RegExp(CHECKOUT_ORIGINAL, "g"), CHECKOUT_FINAL);
 
-    // Pega o HTML já renderizado
-    let content = await page.content();
-
-    // Substitui o checkout original pelo seu
-    content = content.replace(new RegExp(ORIGINAL_CHECKOUT, "g"), MEU_CHECKOUT);
-
-    await browser.close();
-
-    res.send(content);
+    res.send(body);
   } catch (err) {
-    console.error("Erro no proxy:", err);
-    res.status(500).send("Erro ao carregar página");
+    console.error("Erro ao carregar o quiz:", err);
+    res.status(500).send("Erro ao carregar o quiz");
   }
 });
 
+// Mantém o servidor vivo
 app.listen(PORT, () => {
   console.log(`Servidor rodando em http://localhost:${PORT}`);
 });
